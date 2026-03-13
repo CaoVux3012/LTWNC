@@ -1,28 +1,48 @@
-const Models = require("./Models");
-const bcrypt = require("bcrypt");
-const crypto = require("crypto");
+require('../utils/MongooseUtil');
+const Models = require('./Models');
+const mongoose = require('mongoose');
 
 const CustomerDAO = {
-  async signup(account) {
-    const exist = await Models.Customer.findOne({
-      $or: [{ username: account.username }, { email: account.email }]
-    });
+  // Hàm dùng cho Signup (Kiểm tra xem user/email đã tồn tại chưa)
+  async selectByUsernameOrEmail(username, email) {
+    const query = { $or: [{ username: username }, { email: email }] };
+    const customer = await Models.Customer.findOne(query);
+    return customer;
+  },
 
-    if (exist) {
-      return { message: "Exists username or email" };
-    }
+  // Hàm dùng cho Signup (Thêm user mới vào database)
+  async insert(customer) {
+    customer._id = new mongoose.Types.ObjectId();
+    const result = await Models.Customer.create(customer);
+    return result;
+  },
 
-    const hash = bcrypt.hashSync(account.password, 10);
-    const token = crypto.randomBytes(20).toString("hex");
+  // Hàm dùng cho Active (Kích hoạt tài khoản)
+  async active(_id, token, active) {
+    const query = { _id: _id, token: token };
+    const newvalues = { active: active };
+    const result = await Models.Customer.findOneAndUpdate(query, newvalues, { new: true });
+    return result;
+  },
 
-    account.password = hash;
-    account.token = token;
-    account.active = 0;
+  // Hàm dùng cho Login (Kiểm tra đăng nhập)
+  async selectByUsernameAndPassword(username, password) {
+    const query = { username: username, password: password };
+    const customer = await Models.Customer.findOne(query);
+    return customer;
+  },
 
-    const newCustomer = new Models.Customer(account);
-    await newCustomer.save();
-
-    return { message: "Please check email", id: newCustomer._id, token: token };
+  // Hàm dùng cho My Profile (Cập nhật thông tin)
+  async update(customer) {
+    const newvalues = { 
+      username: customer.username, 
+      password: customer.password, 
+      name: customer.name, 
+      phone: customer.phone, 
+      email: customer.email 
+    };
+    const result = await Models.Customer.findByIdAndUpdate(customer._id, newvalues, { new: true });
+    return result;
   }
 };
 
