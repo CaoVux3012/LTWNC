@@ -5,6 +5,7 @@ const router = express.Router();
 const CategoryDAO = require('../models/CategoryDAO');
 const ProductDAO = require('../models/ProductDAO');
 const CustomerDAO = require('../models/CustomerDAO');
+const OrderDAO = require('../models/OrderDAO'); // DÒNG QUAN TRỌNG NHẤT ĐỂ SỬA LỖI 500
 
 // utils
 const CryptoUtil = require('../utils/CryptoUtil');
@@ -40,10 +41,7 @@ router.get('/products/search/:keyword', async function(req, res) {
   res.json(result);
 });
 
-
 // ================= CUSTOMER =================
-
-// signup
 router.post('/signup', async function (req, res) {
   const username = req.body.username;
   const password = req.body.password;
@@ -55,7 +53,7 @@ router.post('/signup', async function (req, res) {
     if (dbCust) {
       res.json({ success: false, message: 'Exists username or email' });
     } else {
-      const now = new Date().getTime(); // milliseconds
+      const now = new Date().getTime(); 
       const token = CryptoUtil.md5(now.toString());
       const newCust = { username: username, password: password, name: name, phone: phone, email: email, active: 0, token: token };
       const result = await CustomerDAO.insert(newCust);
@@ -75,7 +73,6 @@ router.post('/signup', async function (req, res) {
   }
 });
 
-// active
 router.post('/active', async function (req, res) {
   const _id = req.body.id;
   const token = req.body.token;
@@ -87,7 +84,6 @@ router.post('/active', async function (req, res) {
   }
 });
 
-// login
 router.post('/login', async function (req, res) {
   const username = req.body.username;
   const password = req.body.password;
@@ -112,13 +108,11 @@ router.post('/login', async function (req, res) {
   }
 });
 
-// check token
 router.get('/token', JwtUtil.checkToken, function (req, res) {
   const token = req.headers['x-access-token'] || req.headers['authorization'];
   res.json({ success: true, message: 'Token is valid', token: token });
 });
 
-// myprofile update
 router.put('/customers/:id', JwtUtil.checkToken, async function (req, res) {
   const _id = req.params.id;
   const username = req.body.username;
@@ -132,6 +126,33 @@ router.put('/customers/:id', JwtUtil.checkToken, async function (req, res) {
     res.json(result);
   } catch (err) {
     res.json(null);
+  }
+});
+
+// ================= ORDER =================
+router.post('/checkout', JwtUtil.checkToken, async function (req, res) {
+  try {
+    const now = new Date().getTime(); 
+    const total = req.body.total;
+    const items = req.body.items;
+    const customer = req.body.customer;
+    const order = { cdate: now, total: total, status: 'PENDING', customer: customer, items: items };
+    const result = await OrderDAO.insert(order);
+    res.json(result);
+  } catch (err) {
+    console.error("Lỗi khi Checkout:", err);
+    res.json(null);
+  }
+});
+
+router.get('/orders/customer/:cid', JwtUtil.checkToken, async function (req, res) {
+  try {
+    const _cid = req.params.cid;
+    const orders = await OrderDAO.selectByCustID(_cid);
+    res.json(orders);
+  } catch (err) {
+    console.error("Lỗi khi lấy My Orders:", err);
+    res.json([]); // Trả về mảng rỗng nếu lỗi để Frontend không bị sập
   }
 });
 
