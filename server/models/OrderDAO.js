@@ -3,16 +3,31 @@ const Models = require('./Models');
 const mongoose = require('mongoose');
 
 const OrderDAO = {
+  // --- Các hàm của Lab 07 ---
   async insert(order) {
     order._id = new mongoose.Types.ObjectId();
     const result = await Models.Order.create(order);
     return result;
   },
+  
   async selectByCustID(_cid) {
-    // Truy vấn vào trường _id nằm bên trong object customer
     const query = { 'customer._id': _cid };
     const orders = await Models.Order.find(query).exec();
     return orders;
+  },
+
+  // --- Các hàm của Lab 08 (Bị thiếu gây ra lỗi trên) ---
+  async selectAll() {
+    const query = {};
+    const mysort = { cdate: -1 }; // descending
+    const orders = await Models.Order.find(query).sort(mysort).exec();
+    return orders;
+  },
+  
+  async update(_id, newStatus) {
+    const newvalues = { status: newStatus };
+    const result = await Models.Order.findByIdAndUpdate(_id, newvalues, { new: true });
+    return result;
   }
 };
 
